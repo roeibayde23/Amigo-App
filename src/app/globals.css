@@ -306,3 +306,84 @@
   .loading-note{ text-align:center; font-size:12px; color:var(--ink-soft); padding:24px 6px; }
   :focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
 }
+
+/* ---- Milestone 3: mic talk button, confirm switch ---- */
+.mic-talk-btn{ margin:12px auto 0; border:none; border-radius:999px; padding:12px 22px; background:var(--burgundy); color:var(--on-burgundy); font-family:var(--font-rubik), 'Rubik', sans-serif; font-weight:600; font-size:14px; cursor:pointer; box-shadow:0 8px 20px rgba(67,10,27,.3); }
+.confirm-switch{ margin-inline-start:auto; border:none; background:none; color:var(--ink-soft); font-family:inherit; font-size:11px; text-decoration:underline; cursor:pointer; padding:0; }
+.confirm-actions button:disabled{ opacity:.6; }
+.mic-input-row input::placeholder{ color:var(--ink-soft); opacity:.7; font-size:12px; }
+
+/* ---- compact mail rows + priority sections ---- */
+.mail-section{ margin-bottom:14px; }
+.mail-section-title{ display:flex; align-items:center; justify-content:space-between; font-size:12px; font-weight:600; color:var(--ink-soft); margin:4px 4px 7px; }
+.mail-section.urgent .mail-section-title{ color:var(--burgundy); }
+.mail-section-count{ background:var(--burgundy); color:var(--on-burgundy); border-radius:9px; font-size:10.5px; padding:1px 8px; }
+.mail-row{ display:flex; flex-wrap:wrap; align-items:center; background:var(--paper); border:1px solid var(--bg-deep); border-radius:13px; margin-bottom:7px; box-shadow:0 2px 8px rgba(67,10,27,.04); overflow:hidden; }
+.mail-row.urgent{ border-inline-start:4px solid var(--burgundy); }
+.mail-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; padding:9px 12px; border:none; background:none; text-align:start; font-family:inherit; color:inherit; cursor:pointer; }
+.mail-line1{ display:flex; align-items:center; gap:6px; min-width:0; }
+.mail-dot{ width:7px; height:7px; border-radius:50%; background:var(--burgundy); flex-shrink:0; }
+.mail-sender{ font-size:12.5px; font-weight:500; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.mail-row.unread .mail-sender{ font-weight:700; color:var(--burgundy); }
+.mail-time{ margin-inline-start:auto; font-size:10.5px; color:var(--ink-soft); flex-shrink:0; }
+.mail-subj{ font-size:12.5px; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mail-row.unread .mail-subj{ color:var(--ink); font-weight:500; }
+.mail-badge{ font-size:9.5px; font-weight:700; padding:1px 7px; border-radius:7px; background:var(--gold); color:var(--paper); flex-shrink:0; }
+.mail-badge.hot{ background:var(--burgundy); color:var(--on-burgundy); }
+.mail-icons{ display:flex; align-items:center; padding-inline-end:6px; }
+.mail-icon{ width:30px; height:34px; border:none; background:none; color:var(--ink-soft); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.mail-icon svg{ width:15px; height:15px; }
+.mail-icon.on{ color:var(--gold); }
+.mail-icon.on svg{ fill:var(--gold); }
+.mail-ask{ flex-basis:100%; display:flex; align-items:center; gap:8px; padding:6px 12px 8px; border-top:1px dashed var(--bg-deep); font-size:11.5px; color:var(--burgundy); }
+.mail-ask button{ border:1px solid var(--burgundy); background:var(--paper); color:var(--burgundy); border-radius:9px; padding:2px 12px; font-family:inherit; font-size:11.5px; font-weight:600; cursor:pointer; }
+.mail-ask button:first-of-type{ background:var(--burgundy); color:var(--on-burgundy); }
+.mail-low-toggle{ width:100%; border:1px dashed var(--bg-deep); background:none; border-radius:12px; padding:9px; font-family:inherit; font-size:12px; color:var(--ink-soft); cursor:pointer; margin-bottom:7px; }
+.notice-card.compact{ padding:12px 14px; margin-bottom:12px; }
+.notice-card.compact h3{ font-size:15px; }
+.notice-card.compact p{ margin-bottom:9px; }
+
+/* ---- mini month calendar popover ---- */
+.daynav{ position:relative; }
+.daynav-pill{ font-family:inherit; color:inherit; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+.daynav-pill .caret{ font-size:9px; color:var(--ink-soft); }
+.mp-backdrop{ position:fixed; inset:0; z-index:40; background:transparent; }
+.mp{ position:fixed; left:50%; transform:translateX(-50%); z-index:41; width:min(300px, calc(100vw - 24px)); background:var(--paper); border:1px solid var(--bg-deep); border-radius:18px; box-shadow:0 14px 34px rgba(67,10,27,.22); padding:12px 12px 10px; animation:mpIn .16s ease-out; }
+@keyframes mpIn{ from{ opacity:0; transform:translate(-50%,-6px); } to{ opacity:1; transform:translate(-50%,0); } }
+.mp-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.mp-title{ font-family:var(--font-frank), 'Frank Ruhl Libre', serif; font-size:16px; font-weight:600; color:var(--burgundy); }
+.mp-arrow{ width:32px; height:32px; border:none; border-radius:10px; background:var(--burgundy-soft); color:var(--burgundy); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.mp-arrow svg{ width:15px; height:15px; }
+.mp-grid{ display:grid; grid-template-columns:repeat(7, 1fr); gap:3px; }
+.mp-wd span{ text-align:center; font-size:10.5px; color:var(--ink-soft); font-weight:600; padding:3px 0; }
+.mp-day{ position:relative; height:36px; border:none; border-radius:10px; background:none; font-family:inherit; font-size:13px; color:var(--ink); cursor:pointer; }
+.mp-day:hover{ background:var(--burgundy-soft); }
+.mp-day.today{ color:var(--burgundy); font-weight:700; box-shadow:inset 0 0 0 1.5px var(--gold); }
+.mp-day.sel{ background:var(--burgundy); color:var(--on-burgundy); font-weight:700; }
+.mp-dot{ position:absolute; bottom:4px; left:50%; transform:translateX(-50%); width:4px; height:4px; border-radius:50%; background:var(--gold); }
+.mp-day.sel .mp-dot{ background:var(--on-burgundy); }
+.mp-today{ display:block; margin:8px auto 0; border:none; background:none; color:var(--burgundy); font-family:inherit; font-size:12px; font-weight:600; text-decoration:underline; cursor:pointer; }
+.tl-allday{ font-size:10px; background:var(--burgundy-soft); color:var(--burgundy); padding:1px 7px; border-radius:7px; }
+.tl-repeat{ font-size:10px; opacity:.75; }
+.cal-note{ margin-bottom:12px; }
+
+/* ---- event sheet extras, task due pill, reminders settings ---- */
+.field select{ width:100%; border:1px solid var(--bg-deep); background:var(--paper); border-radius:12px; padding:11px 13px; font-family:var(--font-rubik), 'Rubik', sans-serif; font-size:13.5px; color:var(--ink); outline:none; appearance:auto; }
+.field-hint{ font-size:11px; color:var(--ink-soft); margin:-6px 2px 12px; }
+.field-link{ display:block; text-align:center; margin-top:10px; font-size:12px; color:var(--burgundy); }
+.btn-save:disabled{ opacity:.6; }
+.task-due{ font-size:10px; color:var(--ink-soft); background:var(--bg-deep); padding:2px 7px; border-radius:8px; flex-shrink:0; white-space:nowrap; }
+.task-due.today{ background:var(--gold); color:var(--paper); }
+.task-due.overdue{ background:var(--burgundy); color:var(--on-burgundy); }
+.settings-block{ padding:14px 4px; border-top:1px solid var(--bg-deep); }
+.settings-block .settings-top{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.settings-sub{ font-size:11px; color:var(--ink-soft); margin-top:3px; line-height:1.45; }
+.guide{ margin-top:10px; background:var(--burgundy-soft); border-radius:12px; padding:4px 12px; }
+.guide summary{ cursor:pointer; font-size:12.5px; font-weight:600; color:var(--burgundy); padding:8px 0; }
+.guide ol{ margin:0 0 8px; padding-inline-start:18px; font-size:12px; line-height:1.55; color:var(--ink); }
+.guide li{ margin-bottom:6px; }
+.guide code{ direction:ltr; unicode-bidi:embed; background:var(--paper); border-radius:5px; padding:0 5px; font-size:11.5px; }
+.guide-actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding-bottom:10px; }
+/* RTL switch fix (prototype bug: the "on" thumb slid outside the track) */
+html[dir="rtl"] .switch-track::before{ left:auto; right:3px; }
+.guide code{ white-space:nowrap; }

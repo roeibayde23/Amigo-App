@@ -4,11 +4,13 @@ import { useApp } from "@/components/AppProvider";
 import RecurringTaskSheet from "@/components/RecurringTaskSheet";
 import SubHeader from "@/components/SubHeader";
 import { CheckIcon, FileIcon, PlusIcon, RepeatIcon, TrashIcon } from "@/components/icons";
+import { classify } from "@/lib/classify";
+import { addDays, shortDate } from "@/lib/dates";
 import { isTaskDone, recurLabel } from "@/lib/recurrence";
 
 export default function TasksPage() {
   const app = useApp();
-  const { s, tasks, today, ready, openTaskCount } = app;
+  const { s, lang, tasks, today, ready, openTaskCount } = app;
   const [menuOpen, setMenuOpen] = useState(false);
   const [quickAdd, setQuickAdd] = useState(false);
   const [recurOpen, setRecurOpen] = useState(false);
@@ -28,12 +30,28 @@ export default function TasksPage() {
     if (quickAdd) inputRef.current?.focus();
   }, [quickAdd]);
 
-  async function add() {
+  function add() {
     const v = text.trim();
     if (!v) return;
-    await app.addTask({ title: v, recur: null });
+    // "להתקשר לבנק מחר ב-10" → title "להתקשר לבנק", due tomorrow 10:00
+    const parsed = classify(v, s, lang, today);
+    const hasWhen = !!parsed.date || !!parsed.time;
+    const dueDate = parsed.date ?? (parsed.time ? today : null);
     setText("");
     setQuickAdd(false);
+    // synchronous call inside the tap → may open the iPhone Reminders shortcut
+    void app.addTask({
+      title: hasWhen ? parsed.title : v,
+      recur: null,
+      dueDate,
+      dueTime: parsed.time || null,
+    });
+  }
+
+  function dueTag(date: string, time: string | null | undefined, done: boolean) {
+    const label = date === today ? s.dueToday : date === addDays(today, 1) ? s.dueTomorrow : shortDate(date, s, lang);
+    const cls = done ? "" : date < today ? " overdue" : date === today ? " today" : "";
+    return <span className={`task-due${cls}`}>{`${label}${time ? " · " + time : ""}`}</span>;
   }
 
   return (
@@ -86,6 +104,7 @@ export default function TasksPage() {
               <span className="task-text" style={done ? { color: "var(--ink-soft)", textDecoration: "line-through" } : undefined}>
                 {t.title}
               </span>
+              {!t.recur && t.dueDate && dueTag(t.dueDate, t.dueTime, done)}
               {t.recur && (
                 <span className="task-recurring" title={recurLabel(t.recur, s)}>
                   {s.recurringTag} <span className="task-recurring-detail">· {recurLabel(t.recur, s)}</span>

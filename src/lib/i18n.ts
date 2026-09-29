@@ -26,10 +26,10 @@ export type Strings = {
   days: string[]; months: string[];
   greet: { night: Greet; morning: Greet; noon: Greet; evening: Greet; late: Greet };
   name: string;
-  demoMail: { from: string; subject: string; preview: string }[];
+  demoMail: { from: string; email: string; subject: string; preview: string; bulk?: boolean; category?: string; gmailImportant?: boolean }[];
   defaultTasks: { text: string; recurring: boolean; done?: boolean }[];
   defaultEvents: { time: string; endTime: string; title: string; color: number }[];
-  eventWords: string[]; stripWords: string[]; tomorrowWords: string[];
+  eventWords: string[]; stripWords: string[];
   ampmEvening: string; ampmNight: string;
   // added in the Next.js rebuild
   today: string; yesterday: string; demoMode: string; connected: string; signOut: string;
@@ -37,6 +37,24 @@ export type Strings = {
   mailNotConfigured: string; mailFailed: string; retry: string; loading: string; noMails: string;
   recurDaily: string; recurWeekly: (days: string) => string; recurMonthly: (d: number) => string;
   dataError: string; back: string; prevDay: string; nextDay: string; settings: string; close: string;
+  // Google Calendar / Tasks sync
+  googleAccount: string; reconnectGoogleTitle: string; reconnectGoogleBody: string; reconnectGoogleBtn: string;
+  gApiDisabled: string; gFailed: string; gSaveFailed: string; gNotFound: string; gReconnectToast: string;
+  savedCalendarToast: string; savedTasksToast: string; savedDemoEvent: string; savedDemoTask: string;
+  allDay: string; noTimeHint: string; repeatLabel: string; repeatNone: string; recurringInstance: string;
+  openInGoogle: string; dueToday: string; dueTomorrow: string; dueLabel: (d: string) => string; overdue: string;
+  micSpeakNow: string; micVoiceHint: string; micTypeHint: string; micNoPermission: string; micNoSpeech: string;
+  micAgain: string; switchToTask: string; switchToEvent: string; noDate: string; fromMail: string;
+  micTapToTalk: string; micExample: string;
+  // mail priority
+  mailUrgent: string; mailOthers: string; mailLow: string; badgeUrgent: string; badgeImportant: string;
+  askImportant: string; yes: string; no: string; showLow: (n: number) => string; hideLow: string;
+  senderImportantToast: (who: string) => string; senderLowToast: (who: string) => string;
+  // mini month calendar
+  pickDate: string; prevMonth: string; nextMonth: string; goToday: string;
+  // iPhone Reminders (Shortcuts)
+  remindersLabel: string; remindersSub: string; remindersGuideTitle: string; remindersGuide: string[];
+  remindersTest: string; remindersIosOnly: string; remindersTestTitle: string; sentToReminders: string;
 };
 
 const he: Strings = {
@@ -74,9 +92,11 @@ const he: Strings = {
   },
   name: "רועי",
   demoMail: [
-    { from: "שי כהן", subject: "אישור לפגישה מחר", preview: "היי, מאשר את הפגישה מחר ב-9:00. נתראה במשרד..." },
-    { from: "בנק הפועלים", subject: "עדכון יתרה חודשי", preview: "דוח הפעילות החודשי שלך מוכן לצפייה באזור האישי..." },
-    { from: "ועד הבית", subject: "תשלום ועד בית — תזכורת", preview: "מזכירים כי התשלום החודשי יש להעביר עד ה-5 בחודש..." },
+    { from: "שי כהן", email: "shai.cohen@gmail.com", subject: "אישור לפגישה מחר", preview: "היי, מאשר את הפגישה מחר ב-9:00. נתראה במשרד...", gmailImportant: true },
+    { from: "בנק הפועלים", email: "no-reply@bankhapoalim.co.il", subject: "עדכון יתרה חודשי", preview: "דוח הפעילות החודשי שלך מוכן לצפייה באזור האישי...", category: "UPDATES" },
+    { from: "ועד הבית", email: "vaad.habait@gmail.com", subject: "תשלום ועד בית — תזכורת", preview: "מזכירים כי התשלום החודשי יש להעביר עד ה-5 בחודש..." },
+    { from: "דנה לוי", email: "dana.levi@gmail.com", subject: "תמונות מהטיול", preview: "העליתי את כל התמונות לאלבום..." },
+    { from: "Wolt", email: "news@wolt.com", subject: "20% הנחה על ההזמנה הבאה 🍕", preview: "רק השבוע...", bulk: true, category: "PROMOTIONS" },
   ],
   defaultTasks: [
     { text: "לשלם שכר דירה", recurring: true },
@@ -91,9 +111,8 @@ const he: Strings = {
     { time: "18:00", endTime: "19:00", title: "אימון בחדר כושר", color: 4 },
     { time: "21:30", endTime: "22:00", title: "שיחת צ'ק-אין עם המנהל", color: 5 },
   ],
-  eventWords: ["פגישה", "פגישת", "תור", "אירוע", "ניפגש", "נפגש", "להיפגש", "ראיון"],
-  stripWords: ["תקבע לי", "קבע לי", "תקבעי לי", "קבעי לי", "קבע", "תזכיר לי", "תזכירי לי", "בבקשה"],
-  tomorrowWords: ["מחר"],
+  eventWords: ["פגישה", "פגישת", "תור ", "אירוע", "ניפגש", "נפגש", "להיפגש", "לפגוש", "ראיון", "ישיבה", "מפגש", "דייט", "ארוחת"],
+  stripWords: ["תכניס ליומן", "תוסיף ליומן", "תוסיף משימה", "תרשום לי", "תקבע לי", "קבע לי", "תקבעי לי", "קבעי לי", "תזכיר לי", "תזכירי לי", "תוסיף", "תרשום", "קבע", "ליומן", "בבקשה"],
   ampmEvening: "בערב", ampmNight: "בלילה",
   today: "היום", yesterday: "אתמול", demoMode: "מצב הדגמה", connected: "מחובר", signOut: "התנתק",
   reconnectTitle: "צריך לחבר מחדש את Gmail",
@@ -103,6 +122,53 @@ const he: Strings = {
   mailFailed: "לא הצלחנו לטעון את המיילים כרגע.", retry: "נסה שוב", loading: "טוען...", noMails: "אין מיילים חדשים 📭",
   recurDaily: "כל יום", recurWeekly: (d) => "ימים " + d, recurMonthly: (d) => "ב-" + d + " לחודש",
   dataError: "שמירה נכשלה, נסה שוב", back: "חזרה", prevDay: "היום הקודם", nextDay: "היום הבא", settings: "הגדרות", close: "סגור",
+  googleAccount: "חשבון Google",
+  reconnectGoogleTitle: "חיבור מחדש לגוגל (פעם אחת)",
+  reconnectGoogleBody: "אמיגו מסתנכרן עכשיו עם יומן Google. כדי לאשר את ההרשאה החדשה צריך להתחבר מחדש פעם אחת בלבד.",
+  reconnectGoogleBtn: "התחבר מחדש עם Google",
+  gApiDisabled: "יומן Google עוד לא הופעל בשרת. נסה שוב בעוד כמה דקות.",
+  gFailed: "לא הצלחנו לדבר עם גוגל כרגע. נסה שוב.",
+  gSaveFailed: "השמירה בגוגל נכשלה, נסה שוב",
+  gNotFound: "הפריט כבר לא קיים בגוגל",
+  gReconnectToast: "צריך להתחבר מחדש לגוגל",
+  savedCalendarToast: "נשמר ביומן גוגל ✓", savedTasksToast: "נשמר במשימות ✓",
+  savedDemoEvent: "נשמר ביומן ✓", savedDemoTask: "נשמר במשימות ✓",
+  allDay: "כל היום", noTimeHint: "בלי שעה = אירוע של כל היום", repeatLabel: "חזרה", repeatNone: "ללא",
+  recurringInstance: "🔁 אירוע חוזר — השינוי יחול רק על המופע הזה",
+  openInGoogle: "פתח ביומן Google",
+  dueToday: "היום", dueTomorrow: "מחר", dueLabel: (d) => d, overdue: "באיחור",
+  micSpeakNow: "מקשיב... דבר עכשיו 🎙️",
+  micVoiceHint: "דבר או הקלד — אמיגו ישאל לפני שהוא שומר",
+  micTypeHint: "הדפדפן הזה לא תומך בזיהוי דיבור — הקלד מה שהיית אומר",
+  micNoPermission: "אין גישה למיקרופון — אפשר להקליד במקום",
+  micNoSpeech: "לא שמעתי כלום — נסה שוב או הקלד",
+  micAgain: "🎙️ דבר שוב",
+  switchToTask: "זו בעצם משימה", switchToEvent: "זה בעצם אירוע",
+  noDate: "בלי תאריך", fromMail: "מתוך מייל",
+  micTapToTalk: "🎙️ לחץ ודבר", micExample: "לדוגמה: פגישה עם שי מחר ב-9",
+  mailUrgent: "דחוף וחשוב", mailOthers: "שאר המיילים", mailLow: "פחות חשוב", badgeUrgent: "דחוף", badgeImportant: "חשוב",
+  askImportant: "זה חשוב?", yes: "כן", no: "לא",
+  showLow: (n) => `הצג ${n} מיילים פחות חשובים`, hideLow: "הסתר מיילים פחות חשובים",
+  senderImportantToast: (w) => `מעכשיו מיילים מ${w} יופיעו למעלה ✓`,
+  senderLowToast: (w) => `הבנתי, מיילים מ${w} יופיעו למטה`,
+  pickDate: "בחר תאריך", prevMonth: "החודש הקודם", nextMonth: "החודש הבא", goToday: "היום",
+  remindersLabel: "שליחת משימות לתזכורות באייפון",
+  remindersSub: 'כל משימה חדשה נשלחת לאפליקציית התזכורות דרך הקיצור "Amigo Reminder"',
+  remindersGuideTitle: "איך בונים את הקיצור (פעם אחת, כ-3 דקות)",
+  remindersGuide: [
+    'פתח את אפליקציית "קיצורים" (Shortcuts) באייפון ולחץ על ＋ למעלה.',
+    'לחץ על שם הקיצור למעלה ושנה אותו ל: Amigo Reminder (באנגלית, בדיוק כך — A ו-R גדולות, רווח באמצע).',
+    'לחץ "הוסף פעולה", חפש "מילון" (Dictionary) ובחר "קבל מילון מהקלט" (Get Dictionary from Input). הקלט צריך להיות "קלט קיצור" (Shortcut Input). אם למעלה מופיע "קבל קלט", בחר סוג: טקסט.',
+    'הוסף פעולה "קבל ערך מילון" (Get Dictionary Value). לחץ על "מפתח" (Key) וכתוב: title',
+    'הוסף שוב "קבל ערך מילון", והפעם כתוב במפתח: due',
+    'הוסף פעולה "אם" (If). בתנאי בחר את "ערך מילון" האחרון (של due) ← "יש ערך כלשהו" (has any value).',
+    'בתוך ה"אם": הוסף "הוסף תזכורת חדשה" (Add New Reminder). בשדה הטקסט בחר את המשתנה "ערך מילון" הראשון (של title). לחץ על החץ ▸ / "הצג עוד" ← "התראה" (Alert) ← "בזמן" (At Time), ובשדה התאריך בחר את "ערך מילון" של due.',
+    'גרור לתוך "אחרת" (Otherwise) עוד פעולת "הוסף תזכורת חדשה" עם אותו title — בלי התראה (למשימות בלי תאריך).',
+    'לחץ "סיום". חזור לאמיגו ← הגדרות ← "בדיקה". בפעם הראשונה אשר את "פתח בקיצורים" ואת הגישה לתזכורות ("אפשר תמיד").',
+    'אחרי שהתזכורת נוספה, חוזרים לאמיגו בלחיצה על "◀ Safari" בפינה העליונה.',
+  ],
+  remindersTest: "בדיקה: שלח תזכורת לדוגמה", remindersIosOnly: "עובד רק באייפון / אייפד (Safari)",
+  remindersTestTitle: "בדיקה מאמיגו 🐶", sentToReminders: "נשלח לתזכורות באייפון ✓",
 };
 
 const en: Strings = {
@@ -140,9 +206,11 @@ const en: Strings = {
   },
   name: "Roei",
   demoMail: [
-    { from: "Shai Cohen", subject: "Confirming tomorrow's meeting", preview: "Hey, confirming our meeting tomorrow at 9. See you at the office..." },
-    { from: "Bank Hapoalim", subject: "Monthly balance update", preview: "Your monthly activity report is ready to view in your account..." },
-    { from: "Building Committee", subject: "HOA payment — reminder", preview: "Just a reminder that the monthly payment is due by the 5th..." },
+    { from: "Shai Cohen", email: "shai.cohen@gmail.com", subject: "Confirming tomorrow's meeting", preview: "Hey, confirming our meeting tomorrow at 9. See you at the office...", gmailImportant: true },
+    { from: "Bank Hapoalim", email: "no-reply@bankhapoalim.co.il", subject: "Monthly balance update", preview: "Your monthly activity report is ready to view in your account...", category: "UPDATES" },
+    { from: "Building Committee", email: "vaad.habait@gmail.com", subject: "HOA payment — reminder", preview: "Just a reminder that the monthly payment is due by the 5th..." },
+    { from: "Dana Levi", email: "dana.levi@gmail.com", subject: "Photos from the trip", preview: "I uploaded all the photos..." },
+    { from: "Wolt", email: "news@wolt.com", subject: "20% off your next order 🍕", preview: "This week only...", bulk: true, category: "PROMOTIONS" },
   ],
   defaultTasks: [
     { text: "Pay rent", recurring: true },
@@ -157,9 +225,8 @@ const en: Strings = {
     { time: "18:00", endTime: "19:00", title: "Gym workout", color: 4 },
     { time: "21:30", endTime: "22:00", title: "Check-in call with manager", color: 5 },
   ],
-  eventWords: ["meeting", "appointment", "call", "interview"],
-  stripWords: ["set a", "schedule a", "remind me to", "please"],
-  tomorrowWords: ["tomorrow"],
+  eventWords: ["meeting", "appointment", "interview", "dinner with", "lunch with"],
+  stripWords: ["add to my calendar", "add a task to", "add a task", "set up a", "set a", "schedule a", "remind me to", "please"],
   ampmEvening: "pm", ampmNight: "pm",
   today: "Today", yesterday: "Yesterday", demoMode: "Demo mode", connected: "Connected", signOut: "Sign out",
   reconnectTitle: "Gmail needs to be reconnected",
@@ -169,6 +236,53 @@ const en: Strings = {
   mailFailed: "Couldn't load your email right now.", retry: "Try again", loading: "Loading...", noMails: "No new emails 📭",
   recurDaily: "Daily", recurWeekly: (d) => d, recurMonthly: (d) => "Day " + d,
   dataError: "Saving failed, please try again", back: "Back", prevDay: "Previous day", nextDay: "Next day", settings: "Settings", close: "Close",
+  googleAccount: "Google account",
+  reconnectGoogleTitle: "Reconnect Google (one time)",
+  reconnectGoogleBody: "Amigo now syncs with Google Calendar. Sign in again once to approve the new permission.",
+  reconnectGoogleBtn: "Reconnect with Google",
+  gApiDisabled: "Google Calendar isn't enabled on the server yet. Try again in a few minutes.",
+  gFailed: "Couldn't reach Google right now. Please try again.",
+  gSaveFailed: "Saving to Google failed, please try again",
+  gNotFound: "This item no longer exists in Google",
+  gReconnectToast: "Please reconnect Google",
+  savedCalendarToast: "Saved to Google Calendar ✓", savedTasksToast: "Saved to tasks ✓",
+  savedDemoEvent: "Saved to calendar ✓", savedDemoTask: "Saved to tasks ✓",
+  allDay: "All day", noTimeHint: "No time = all-day event", repeatLabel: "Repeat", repeatNone: "None",
+  recurringInstance: "🔁 Recurring event — changes apply to this occurrence only",
+  openInGoogle: "Open in Google Calendar",
+  dueToday: "Today", dueTomorrow: "Tomorrow", dueLabel: (d) => d, overdue: "Overdue",
+  micSpeakNow: "Listening... speak now 🎙️",
+  micVoiceHint: "Speak or type — Amigo asks before saving",
+  micTypeHint: "This browser has no speech recognition — type what you'd say",
+  micNoPermission: "No microphone access — you can type instead",
+  micNoSpeech: "I didn't hear anything — try again or type",
+  micAgain: "🎙️ Speak again",
+  switchToTask: "Make it a task", switchToEvent: "Make it an event",
+  noDate: "No date", fromMail: "From email",
+  micTapToTalk: "🎙️ Tap and speak", micExample: "e.g. Meeting with Shai tomorrow at 9",
+  mailUrgent: "Urgent & important", mailOthers: "Other emails", mailLow: "Less important", badgeUrgent: "Urgent", badgeImportant: "Important",
+  askImportant: "Important?", yes: "Yes", no: "No",
+  showLow: (n) => `Show ${n} less important emails`, hideLow: "Hide less important emails",
+  senderImportantToast: (w) => `Emails from ${w} will now show at the top ✓`,
+  senderLowToast: (w) => `Got it, emails from ${w} will show lower`,
+  pickDate: "Pick a date", prevMonth: "Previous month", nextMonth: "Next month", goToday: "Today",
+  remindersLabel: "Send tasks to iPhone Reminders",
+  remindersSub: 'Every new task goes to the Reminders app via the "Amigo Reminder" shortcut',
+  remindersGuideTitle: "How to build the shortcut (once, ~3 minutes)",
+  remindersGuide: [
+    'Open the Shortcuts app on your iPhone and tap ＋.',
+    'Rename the shortcut to exactly: Amigo Reminder',
+    'Add action "Get Dictionary from Input" (input = Shortcut Input). If "Receive input" shows at the top, choose type: Text.',
+    'Add "Get Dictionary Value" with Key: title',
+    'Add another "Get Dictionary Value" with Key: due',
+    'Add "If": the last Dictionary Value (due) → "has any value".',
+    'Inside If: "Add New Reminder" with the first Dictionary Value (title); Show More → Alert → At Time → the due Dictionary Value.',
+    'In Otherwise: another "Add New Reminder" with the title only (no alert).',
+    'Tap Done. In Amigo → Settings → "Test". Allow "Open in Shortcuts" and Reminders access ("Always Allow").',
+    'After the reminder is added, tap "◀ Safari" at the top to return to Amigo.',
+  ],
+  remindersTest: "Test: send a sample reminder", remindersIosOnly: "Works on iPhone / iPad (Safari) only",
+  remindersTestTitle: "Test from Amigo 🐶", sentToReminders: "Sent to iPhone Reminders ✓",
 };
 
 export const STRINGS: Record<Lang, Strings> = { he, en };

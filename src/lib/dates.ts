@@ -78,3 +78,12 @@ export function addMinutes(hm: string, minutes: number): string {
   const total = Math.min(h * 60 + m + minutes, 23 * 60 + 59);
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
+
+/** Compact mail time: "14:05" today, "אתמול" / "Yesterday", else "28/9" (app timezone). */
+export function mailTime(iso: string, today: string, s: Strings): string {
+  const z = zonedNow(new Date(iso));
+  if (z.date === today) return z.hm;
+  if (z.date === addDays(today, -1)) return s.yesterday;
+  const [, m, d] = z.date.split("-").map(Number);
+  return `${d}/${m}`;
+}

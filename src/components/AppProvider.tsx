@@ -2,15 +2,23 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { DEMO_MODE } from "@/lib/env";
 import { STRINGS, type Strings } from "@/lib/i18n";
-import { zonedNow } from "@/lib/dates";
+import { addDays, zonedNow } from "@/lib/dates";
 import { togglePatch, isTaskDone } from "@/lib/recurrence";
 import { demoRepo } from "@/lib/data/demo";
 import { createLiveRepo } from "@/lib/data/live";
-import type { NewEvent, NewTask, Repo } from "@/lib/data/repo";
+import { RepoError, type NewEvent, type NewTask, type Repo } from "@/lib/data/repo";
+import { senderKey, type SenderPrefs } from "@/lib/mailPriority";
+import { remindersEnabled, sendToReminders, setRemindersEnabled } from "@/lib/reminders";
 import { getBrowserSupabase } from "@/lib/supabase/client";
-import type { CalEvent, Lang, Mail, MailError, Task } from "@/lib/types";
+import type { ApiError, CalEvent, Lang, Mail, MailError, Task } from "@/lib/types";
 
 type MailStatus = "loading" | "ok" | MailError;
+type CalStatus = "loading" | "ok" | ApiError;
+type Range = { from: string; to: string };
+export type TaskDraft = Pick<Task, "title"> & Partial<Omit<NewTask, "title">>;
+/** Initial window of events fetched from Google (the calendar page widens it on demand). */
+const INITIAL_BACK = 31;
+const INITIAL_AHEAD = 92;
 type Sheet = "mic" | "settings" | null;
 
 type Ctx = {
@@ -24,7 +32,10 @@ type Ctx = {
   hour: number;
   tasks: Task[];
   events: CalEvent[];
+  calStatus: CalStatus;
   mails: Mail[];
+  senderPrefs: SenderPrefs;
+  remindersOn: boolean;
   mailStatus: MailStatus;
   unreadCount: number;
   openTaskCount: number;
@@ -35,13 +46,19 @@ type Ctx = {
   setDark(on: boolean): void;
   openSheet(s: Sheet): void;
   showToast(msg: string): void;
-  addTask(t: Omit<NewTask, "done" | "lastDoneOn" | "sourceGmailId"> & Partial<NewTask>): Promise<void>;
+  /** Saves to Amigo (Supabase / demo) and – if enabled on iPhone – opens the Reminders shortcut.
+   *  Call straight from a tap handler (the shortcut launch needs the user gesture). */
+  addTask(t: TaskDraft): Promise<boolean>;
   toggleTask(id: string): Promise<void>;
   deleteTask(id: string): Promise<void>;
-  addEvent(e: NewEvent): Promise<void>;
+  addEvent(e: NewEvent): Promise<boolean>;
   updateEvent(id: string, patch: Partial<CalEvent>): Promise<void>;
   deleteEvent(id: string): Promise<void>;
+  ensureEvents(date: string): void;
+  reloadEvents(): Promise<void>;
   reloadMail(): Promise<void>;
+  setSenderPref(m: Mail, important: boolean): Promise<void>;
+  setRemindersOn(on: boolean): void;
   toggleImportant(id: string): Promise<void>;
   hideMail(id: string): Promise<void>;
   openMail(m: Mail): void;
@@ -78,7 +95,11 @@ export default function AppProvider({
   const [ready, setReady] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<CalEvent[]>([]);
+  const [calStatus, setCalStatus] = useState<CalStatus>("loading");
+  const rangeRef = useRef<Range | null>(null);
   const [mails, setMails] = useState<Mail[]>([]);
+  const [senderPrefs, setSenderPrefs] = useState<SenderPrefs>({});
+  const [remindersOn, setRemindersOnState] = useState(true);
   const [mailStatus, setMailStatus] = useState<MailStatus>("loading");
   const [unreadCount, setUnreadCount] = useState(0);
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -139,15 +160,26 @@ export default function AppProvider({
     (async () => {
       const strings = STRINGS[initialLang];
       const today = zonedNow().date;
-      try {
-        const [t, e] = await Promise.all([repo.listTasks(strings), repo.listEvents(strings, today)]);
-        if (cancelled) return;
-        setTasks(t);
-        setEvents(e);
-      } catch (err) {
-        console.error(err);
+      const range = { from: addDays(today, -INITIAL_BACK), to: addDays(today, INITIAL_AHEAD) };
+      setRemindersOnState(remindersEnabled());
+      const [t, e, p] = await Promise.allSettled([
+        repo.listTasks(strings),
+        repo.listEvents(strings, today, range.from, range.to),
+        repo.loadSenderPrefs(),
+      ]);
+      if (cancelled) return;
+      if (t.status === "fulfilled") setTasks(t.value);
+      else console.error(t.reason);
+      if (e.status === "fulfilled") {
+        rangeRef.current = range;
+        setEvents(e.value);
+        setCalStatus("ok");
+      } else {
+        console.error(e.reason);
+        setCalStatus(e.reason instanceof RepoError ? e.reason.code : "google_failed");
       }
-      if (!cancelled) setReady(true);
+      if (p.status === "fulfilled") setSenderPrefs(p.value);
+      setReady(true);
       if (!hasPrefCookie) {
         const prefs = await repo.loadPrefs().catch(() => null);
         if (prefs && !cancelled) {
@@ -204,8 +236,69 @@ export default function AppProvider({
     [lang, showToast],
   );
 
+  /** Google Calendar write failed → Hebrew toast; a reconnect need also flips the calendar card. */
+  const gFail = useCallback(
+    (err: unknown) => {
+      console.error(err);
+      const st = STRINGS[lang];
+      const code = err instanceof RepoError ? err.code : null;
+      if (code === "reconnect" || code === "unauthorized") {
+        setCalStatus("reconnect");
+        showToast(st.gReconnectToast);
+      } else if (code === "api_disabled") showToast(st.gApiDisabled);
+      else if (code === "not_found") showToast(st.gNotFound);
+      else showToast(DEMO_MODE ? st.dataError : st.gSaveFailed);
+    },
+    [lang, showToast],
+  );
+
+  /** Merge-fetch events for a window (used when the calendar jumps outside what's loaded). */
+  const fetchRange = useCallback(
+    async (r: Repo, range: Range, replace: boolean) => {
+      try {
+        const list = await r.listEvents(STRINGS[lang], zonedNow().date, range.from, range.to);
+        setEvents((prev) => {
+          if (replace) return list;
+          const inRange = (e: CalEvent) => (e.endDate ?? e.date) >= range.from && e.date <= range.to;
+          const ids = new Set(list.map((e) => e.id));
+          return [...prev.filter((e) => !inRange(e) && !ids.has(e.id)), ...list];
+        });
+        setCalStatus("ok");
+      } catch (err) {
+        console.error(err);
+        setCalStatus(err instanceof RepoError ? err.code : "google_failed");
+      }
+    },
+    [lang],
+  );
+
   const value = useMemo<Ctx>(() => {
     const today = clock.date;
+    const addTask = async (t: TaskDraft): Promise<boolean> => {
+      if (!repo) return false;
+      const draft: NewTask = {
+        done: false,
+        recur: null,
+        lastDoneOn: null,
+        sourceGmailId: null,
+        dueDate: null,
+        dueTime: null,
+        ...t,
+      };
+      // Launch the iOS Shortcut synchronously (still inside the tap); the insert below is already
+      // on the wire before Safari switches to the Shortcuts app.
+      const save = repo.addTask(draft);
+      const sent = remindersOn && sendToReminders(draft.title, draft.dueDate, draft.dueTime);
+      try {
+        const task = await save;
+        setTasks((prev) => [task, ...prev]);
+        showToast(sent ? STRINGS[lang].sentToReminders : STRINGS[lang].savedTasksToast);
+        return true;
+      } catch (e) {
+        fail(e);
+        return false;
+      }
+    };
     return {
       lang,
       s,
@@ -217,7 +310,10 @@ export default function AppProvider({
       hour: clock.hour,
       tasks,
       events,
+      calStatus,
       mails,
+      senderPrefs,
+      remindersOn,
       mailStatus,
       unreadCount,
       openTaskCount: tasks.filter((t) => !isTaskDone(t, today)).length,
@@ -234,15 +330,7 @@ export default function AppProvider({
       },
       openSheet: setSheet,
       showToast,
-      async addTask(t) {
-        if (!repo) return;
-        try {
-          const task = await repo.addTask({ done: false, lastDoneOn: null, sourceGmailId: null, ...t });
-          setTasks((prev) => [task, ...prev]);
-        } catch (e) {
-          fail(e);
-        }
-      },
+      addTask,
       async toggleTask(id) {
         const task = tasks.find((x) => x.id === id);
         if (!repo || !task) return;
@@ -267,35 +355,59 @@ export default function AppProvider({
         }
       },
       async addEvent(e) {
-        if (!repo) return;
+        if (!repo) return false;
         try {
           const ev = await repo.addEvent(e);
-          setEvents((prev) => [...prev, ev]);
+          if (e.repeat && rangeRef.current) await fetchRange(repo, rangeRef.current, false);
+          else setEvents((prev) => [...prev.filter((x) => x.id !== ev.id), ev]);
+          showToast(repo.mode === "live" ? STRINGS[lang].savedCalendarToast : STRINGS[lang].savedDemoEvent);
+          return true;
         } catch (err) {
-          fail(err);
+          gFail(err);
+          return false;
         }
       },
       async updateEvent(id, patch) {
-        if (!repo) return;
+        const old = events.find((x) => x.id === id);
+        if (!repo || !old) return;
         const before = events;
-        setEvents((prev) => prev.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+        const full = { ...old, ...patch };
+        setEvents((prev) => prev.map((x) => (x.id === id ? full : x)));
         try {
-          await repo.updateEvent(id, patch);
+          const saved = await repo.updateEvent(id, patch, full);
+          setEvents((prev) => prev.map((x) => (x.id === id ? saved : x)));
+          if (repo.mode === "demo" && old.recurring && rangeRef.current) await fetchRange(repo, rangeRef.current, true);
         } catch (err) {
           setEvents(before);
-          fail(err);
+          gFail(err);
         }
       },
       async deleteEvent(id) {
         if (!repo) return;
         const before = events;
+        const old = events.find((x) => x.id === id);
         setEvents((prev) => prev.filter((x) => x.id !== id));
         try {
           await repo.deleteEvent(id);
+          if (repo.mode === "demo" && old?.recurring && rangeRef.current) await fetchRange(repo, rangeRef.current, true);
         } catch (err) {
           setEvents(before);
-          fail(err);
+          gFail(err);
         }
+      },
+      ensureEvents(date) {
+        const r = rangeRef.current;
+        if (!repo || !r || (date >= r.from && date <= r.to)) return;
+        const next = { from: date < r.from ? addDays(date, -31) : r.from, to: date > r.to ? addDays(date, 62) : r.to };
+        rangeRef.current = next;
+        void fetchRange(repo, date < r.from ? { from: next.from, to: r.from } : { from: r.to, to: next.to }, false);
+      },
+      async reloadEvents() {
+        if (!repo) return;
+        setCalStatus("loading");
+        const range = rangeRef.current ?? { from: addDays(today, -INITIAL_BACK), to: addDays(today, INITIAL_AHEAD) };
+        rangeRef.current = range;
+        await fetchRange(repo, range, true);
       },
       async reloadMail() {
         if (!repo) return;
@@ -338,23 +450,31 @@ export default function AppProvider({
         }
       },
       async mailToTask(m) {
-        if (!repo) return;
+        await addTask({
+          title: (m.subject || m.from).slice(0, 300),
+          sourceGmailId: DEMO_MODE ? null : m.id,
+        });
+      },
+      async setSenderPref(m, important) {
+        if (!repo || !m.fromEmail) return;
+        const key = senderKey(m.fromEmail);
+        const before = senderPrefs;
+        setSenderPrefs((p) => ({ ...p, [key]: important }));
+        const st = STRINGS[lang];
+        showToast(important ? st.senderImportantToast(m.from) : st.senderLowToast(m.from));
         try {
-          const task = await repo.addTask({
-            title: m.subject.slice(0, 300),
-            done: false,
-            recur: null,
-            lastDoneOn: null,
-            sourceGmailId: DEMO_MODE ? null : m.id,
-          });
-          setTasks((prev) => [task, ...prev]);
-          showToast(STRINGS[lang].addedToTasksToast);
-        } catch (e) {
-          fail(e);
+          await repo.setSenderPref(key, important);
+        } catch (err) {
+          setSenderPrefs(before);
+          fail(err);
         }
       },
+      setRemindersOn(on) {
+        setRemindersEnabled(on);
+        setRemindersOnState(on);
+      },
     };
-  }, [lang, s, dark, ready, clock, tasks, events, mails, mailStatus, unreadCount, userEmail, sheet, toast, repo, showToast, fail, loadMail]);
+  }, [lang, s, dark, ready, clock, tasks, events, calStatus, mails, senderPrefs, remindersOn, mailStatus, unreadCount, userEmail, sheet, toast, repo, showToast, fail, gFail, fetchRange, loadMail]);
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
 }

@@ -1,6 +1,16 @@
 "use client";
-import { COLORS, type CalEvent, type Mail, type Task } from "../types";
-import type { MailLoad, MailPatch, NewEvent, NewTask, Repo } from "./repo";
+import { addDays } from "../dates";
+import { isDueOn } from "../recurrence";
+import { COLORS, type CalEvent, type Mail, type Recur, type Task } from "../types";
+import {
+  readLocalSenderPrefs,
+  writeLocalSenderPref,
+  type MailLoad,
+  type MailPatch,
+  type NewEvent,
+  type NewTask,
+  type Repo,
+} from "./repo";
 
 // Demo mode: everything lives in this browser's localStorage (v2 keys, not the prototype's).
 const TASKS = "amigo_demo_tasks_v2";
@@ -23,6 +33,26 @@ function write(key: string, v: unknown) {
   }
 }
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()));
+
+type StoredEvent = CalEvent & { repeat?: Recur | null };
+
+/** Demo recurring events: expand the stored series into per-day instances inside [from, to]. */
+function expand(list: StoredEvent[], from: string, to: string): CalEvent[] {
+  const out: CalEvent[] = [];
+  for (const e of list) {
+    if (!e.repeat) {
+      out.push(e);
+      continue;
+    }
+    let d = e.date > from ? e.date : from;
+    for (let i = 0; d <= to && i < 400; i++, d = addDays(d, 1)) {
+      if (d === e.date || isDueOn(e.repeat, d)) {
+        out.push({ ...e, id: d === e.date ? e.id : `${e.id}_${d}`, date: d, recurring: true, repeat: undefined } as CalEvent);
+      }
+    }
+  }
+  return out;
+}
 
 type DemoMailState = Record<string, { important?: boolean; hidden?: boolean; opened?: boolean }>;
 
@@ -57,9 +87,9 @@ export const demoRepo: Repo = {
     write(TASKS, (read<Task[]>(TASKS) ?? []).filter((t) => t.id !== id));
   },
 
-  async listEvents(s, today) {
-    const stored = read<CalEvent[]>(EVENTS);
-    if (stored) return stored;
+  async listEvents(s, today, from, to) {
+    const stored = read<StoredEvent[]>(EVENTS);
+    if (stored) return expand(stored, from, to);
     const seeded: CalEvent[] = s.defaultEvents.map((d) => ({
       id: uid(),
       title: d.title,
@@ -72,15 +102,19 @@ export const demoRepo: Repo = {
     return seeded;
   },
   async addEvent(e: NewEvent) {
-    const ev: CalEvent = { ...e, id: uid() };
-    write(EVENTS, [...(read<CalEvent[]>(EVENTS) ?? []), ev]);
-    return ev;
+    const ev: StoredEvent = { ...e, id: uid(), recurring: !!e.repeat };
+    write(EVENTS, [...(read<StoredEvent[]>(EVENTS) ?? []), ev]);
+    const { repeat: _r, ...plain } = ev;
+    return plain;
   },
-  async updateEvent(id, patch) {
-    write(EVENTS, (read<CalEvent[]>(EVENTS) ?? []).map((e) => (e.id === id ? { ...e, ...patch } : e)));
+  async updateEvent(id, patch, full) {
+    const seriesId = id.split("_")[0];
+    write(EVENTS, (read<StoredEvent[]>(EVENTS) ?? []).map((e) => (e.id === seriesId ? { ...e, ...patch, date: e.repeat ? e.date : (patch.date ?? e.date) } : e)));
+    return full;
   },
   async deleteEvent(id) {
-    write(EVENTS, (read<CalEvent[]>(EVENTS) ?? []).filter((e) => e.id !== id));
+    const seriesId = id.split("_")[0];
+    write(EVENTS, (read<StoredEvent[]>(EVENTS) ?? []).filter((e) => e.id !== seriesId));
   },
 
   async loadMail(s): Promise<MailLoad> {
@@ -94,12 +128,16 @@ export const demoRepo: Repo = {
           id,
           threadId: id,
           from: m.from,
-          fromEmail: "",
+          fromEmail: m.email,
           subject: m.subject,
           snippet: m.preview,
           date: new Date(now - (i + 1) * 45 * 60_000).toISOString(),
-          unread: i < 2 && !st.opened, // demo: two unread, one already read
+          unread: i !== 1 && i < 4 && !st.opened, // demo: a few unread
           important: !!st.important,
+          gmailImportant: !!m.gmailImportant,
+          starred: false,
+          category: m.category ?? null,
+          bulk: !!m.bulk,
           hidden: !!st.hidden,
         };
       })
@@ -116,6 +154,12 @@ export const demoRepo: Repo = {
     const state = read<DemoMailState>(MAIL) ?? {};
     state[id] = { ...state[id], opened: true };
     write(MAIL, state);
+  },
+  async loadSenderPrefs() {
+    return readLocalSenderPrefs();
+  },
+  async setSenderPref(email, important) {
+    writeLocalSenderPref(email.trim().toLowerCase(), important);
   },
   async savePrefs() {
     /* demo: prefs live in cookies only */
