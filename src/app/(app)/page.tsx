@@ -1,11 +1,12 @@
 "use client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useApp } from "@/components/AppProvider";
+import ReconnectGoogleCard from "@/components/ReconnectGoogleCard";
 import { BulbIcon, CalendarIcon, MailIcon, TasksIcon } from "@/components/icons";
 import { greetingKey, shortDate } from "@/lib/dates";
-import { playBark } from "@/lib/bark";
+import { playBark, preloadBark } from "@/lib/bark";
 import { pickSuggestion } from "@/lib/suggestion";
 
 export default function DashboardPage() {
@@ -15,18 +16,20 @@ export default function DashboardPage() {
   const [barking, setBarking] = useState(false);
   const [greetHello, greetSub] = s.greet[greetingKey(hour)];
 
+  useEffect(() => preloadBark(), []);
+
   function dogTap() {
-    playBark();
+    playBark(); // real audio file, started inside the tap (required by iPhone Safari)
     setBarking(true);
     setTimeout(() => setBarking(false), 420);
     app.openSheet("mic");
   }
 
-  const sug = pickSuggestion(app.events, app.mails, app.tasks, today, now);
+  const sug = pickSuggestion(app.events, app.mails, app.tasks, today, now, app.senderPrefs);
   const sugData =
     sug.kind === "event"
       ? { href: "/calendar", Icon: CalendarIcon, label: s.suggestEventLabel, title: sug.event.title,
-          meta: (sug.event.date === today ? "" : shortDate(sug.event.date, s, lang) + " · ") + (sug.event.start ?? "") }
+          meta: (sug.event.date === today ? "" : shortDate(sug.event.date, s, lang) + (sug.event.start ? " · " : "")) + (sug.event.start ?? (sug.event.date === today ? s.allDay : "")) }
       : sug.kind === "mail"
         ? { href: "/mail", Icon: MailIcon, label: s.suggestMailLabel, title: sug.mail.subject, meta: sug.mail.from }
         : sug.kind === "task"
@@ -64,6 +67,8 @@ export default function DashboardPage() {
           <span>{s.menuTasks}</span>
         </button>
       </div>
+
+      {ready && !app.demo && app.calStatus === "reconnect" && <ReconnectGoogleCard next="/" compact />}
 
       {ready && (
         <button className="suggest-card" onClick={() => sugData.href && router.push(sugData.href)}>
