@@ -9,7 +9,8 @@ const frank = Frank_Ruhl_Libre({ subsets: ["hebrew", "latin"], variable: "--font
 export const metadata: Metadata = {
   title: "Amigo — העוזר האישי שלי",
   description: "Amigo – personal assistant for mail, schedule and tasks",
-  icons: { icon: "/images/amigo-headset.webp" },
+  icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "Amigo", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

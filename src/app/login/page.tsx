@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { DEMO_MODE } from "@/lib/env";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
+import SessionWatcher from "@/components/SessionWatcher";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const { next } = await searchParams;
@@ -20,7 +21,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <Link href="/" className="login-btn">כניסה להדגמה</Link>
           </>
         ) : (
-          <GoogleSignInButton next={next} label="התחברות עם Google" />
+          <>
+            <GoogleSignInButton next={next} label="התחברות עם Google" />
+            <SessionWatcher next={next} />
+          </>
         )}
         <p className="login-note">אמיגו מבקש הרשאת קריאה בלבד ל-Gmail שלך.</p>
       </div>

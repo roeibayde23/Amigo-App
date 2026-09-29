@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DEMO_MODE } from "../env";
 import { gmailServerConfigured } from "../env.server";
+import { isTransientAuthError } from "../supabase/proxy";
 import { createServerSupabase } from "../supabase/server";
 import type { ApiError } from "../types";
 import { GoogleApiError, GoogleAuthError } from "./api";
@@ -26,8 +27,10 @@ export class BadRequest extends Error {}
 export async function withGoogle(required: string[], fn: (ctx: GoogleCtx) => Promise<Response>): Promise<Response> {
   if (DEMO_MODE) return apiError("demo", 400);
   const supabase = await createServerSupabase();
-  const { data } = await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getUser();
   const user = data?.user;
+  // Supabase unreachable ≠ signed out: answer 503 so the app shows "try again", not a login screen.
+  if (!user && error && isTransientAuthError(error)) return apiError("google_failed", 503, "auth_unavailable");
   if (!user) return apiError("unauthorized", 401);
   if (!gmailServerConfigured()) return apiError("not_configured", 503);
 

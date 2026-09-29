@@ -73,6 +73,13 @@ export function useApp(): Ctx {
   return c;
 }
 
+/** The Amigo (Supabase) session is really gone → sign in again, then come back here. */
+function toLogin() {
+  if (DEMO_MODE || typeof window === "undefined") return;
+  const here = window.location.pathname + window.location.search;
+  window.location.replace(`/login${here && here !== "/" ? `?next=${encodeURIComponent(here)}` : ""}`);
+}
+
 function setCookie(name: string, value: string) {
   document.cookie = `${name}=${value}; path=/; max-age=31536000; samesite=lax`;
 }
@@ -124,13 +131,18 @@ export default function AppProvider({
   useEffect(() => {
     if (DEMO_MODE) return;
     let cancelled = false;
-    getBrowserSupabase()
-      .auth.getUser()
-      .then(({ data }) => {
-        if (cancelled || !data.user) return;
-        setUserEmail(data.user.email ?? null);
-        setRepo(createLiveRepo(data.user.id));
-      });
+    // getSession() reads the cookie locally (refreshing it if expired) – no network round-trip
+    // needed just to learn the user id; the server verifies the JWT on every request anyway.
+    const sb = getBrowserSupabase();
+    sb.auth.getSession().then(async ({ data }) => {
+      if (cancelled) return;
+      let user = data.session?.user ?? null;
+      if (!user) user = (await sb.auth.getUser()).data.user;
+      if (cancelled) return;
+      if (!user) return toLogin();
+      setUserEmail(user.email ?? null);
+      setRepo(createLiveRepo(user.id));
+    });
     return () => {
       cancelled = true;
     };
@@ -145,6 +157,7 @@ export default function AppProvider({
         if (res.email) setUserEmail(res.email);
         setMailStatus("ok");
       } else {
+        if (res.error === "unauthorized") return toLogin();
         setMails([]);
         setUnreadCount(0);
         setMailStatus(res.error);
@@ -176,6 +189,7 @@ export default function AppProvider({
         setCalStatus("ok");
       } else {
         console.error(e.reason);
+        if (e.reason instanceof RepoError && e.reason.code === "unauthorized") return toLogin();
         setCalStatus(e.reason instanceof RepoError ? e.reason.code : "google_failed");
       }
       if (p.status === "fulfilled") setSenderPrefs(p.value);
@@ -205,6 +219,7 @@ export default function AppProvider({
         if (res.email) setUserEmail(res.email);
         setMailStatus("ok");
       } else {
+        if (res.error === "unauthorized") return toLogin();
         setMails([]);
         setUnreadCount(0);
         setMailStatus(res.error);
@@ -242,7 +257,8 @@ export default function AppProvider({
       console.error(err);
       const st = STRINGS[lang];
       const code = err instanceof RepoError ? err.code : null;
-      if (code === "reconnect" || code === "unauthorized") {
+      if (code === "unauthorized") return toLogin();
+      if (code === "reconnect") {
         setCalStatus("reconnect");
         showToast(st.gReconnectToast);
       } else if (code === "api_disabled") showToast(st.gApiDisabled);
@@ -266,6 +282,7 @@ export default function AppProvider({
         setCalStatus("ok");
       } catch (err) {
         console.error(err);
+        if (err instanceof RepoError && err.code === "unauthorized") return toLogin();
         setCalStatus(err instanceof RepoError ? err.code : "google_failed");
       }
     },

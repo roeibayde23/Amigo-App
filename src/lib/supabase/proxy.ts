@@ -21,22 +21,45 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  // IMPORTANT: getClaims() validates the JWT; don't run code between client creation and this call.
-  const { data } = await supabase.auth.getClaims();
-  const signedIn = !!data?.claims?.sub;
+  // IMPORTANT: getClaims() validates the JWT (refreshing an expired access token with the refresh
+  // token and writing the new cookies through setAll); don't run code between client creation and this call.
+  const { data, error } = await supabase.auth.getClaims();
+  const hasSessionCookie = request.cookies.getAll().some((c) => /^sb-.+-auth-token/.test(c.name));
+  // A flaky mobile network / Supabase hiccup is NOT a sign-out: keep the cookies and let the page load.
+  const transient = !!error && hasSessionCookie && isTransientAuthError(error);
+  const signedIn = !!data?.claims?.sub || transient;
 
   const path = request.nextUrl.pathname;
   const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + "/"));
   const isApi = path.startsWith("/api/");
+
+  // Already signed in (e.g. the home-screen icon was saved on /login) → straight into the app.
+  if (signedIn && !transient && path === "/login") {
+    const next = request.nextUrl.searchParams.get("next");
+    const url = request.nextUrl.clone();
+    url.pathname = next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+    url.search = "";
+    return withCookies(NextResponse.redirect(url), response);
+  }
 
   if (!signedIn && !isPublic && !isApi) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
     if (path !== "/") url.searchParams.set("next", path);
-    const redirect = NextResponse.redirect(url);
-    response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
-    return redirect;
+    return withCookies(NextResponse.redirect(url), response);
   }
   return response;
+}
+
+/** Copy refreshed/cleared auth cookies onto a redirect so they aren't lost. */
+function withCookies(redirect: NextResponse, from: NextResponse) {
+  from.cookies.getAll().forEach((c) => redirect.cookies.set(c));
+  return redirect;
+}
+
+/** Network errors / 5xx from Supabase Auth – the session itself is still fine. */
+export function isTransientAuthError(error: { name?: string; status?: number }): boolean {
+  const n = error.name;
+  return n === "AuthRetryableFetchError" || n === "AuthUnknownError" || (n === "AuthApiError" && (error.status ?? 0) >= 500);
 }
