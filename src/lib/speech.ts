@@ -82,7 +82,23 @@ export function startSpeech(lang: "he" | "en"): boolean {
   r.continuous = false; // stop after the first pause, like a voice assistant
   r.maxAlternatives = 1;
   let finalText = "";
-  r.onstart = () => set({ listening: true, error: null, interim: "" });
+  let started = false;
+  // iPhone home-screen apps sometimes expose the API but never start – don't sit there silently.
+  const watchdog = setTimeout(() => {
+    if (started || rec !== r) return;
+    rec = null;
+    try {
+      r.abort();
+    } catch {
+      /* ignore */
+    }
+    set({ listening: false, error: "no-answer" });
+  }, 4000);
+  r.onstart = () => {
+    started = true;
+    clearTimeout(watchdog);
+    set({ listening: true, error: null, interim: "" });
+  };
   r.onresult = (e) => {
     let interim = "";
     for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -92,12 +108,16 @@ export function startSpeech(lang: "he" | "en"): boolean {
     }
     set({ interim: (finalText + " " + interim).trim() });
   };
-  r.onerror = (e) => set({ error: e.error, listening: false });
+  r.onerror = (e) => {
+    clearTimeout(watchdog);
+    set({ error: e.error, listening: false });
+  };
   r.onend = () => {
+    clearTimeout(watchdog);
     if (rec !== r) return;
     rec = null;
     const text = (finalText || snap.interim).trim();
-    set({ listening: false });
+    set({ listening: false, ...(!text && !snap.error ? { error: "no-speech" } : {}) });
     if (text) {
       if (finalHandler) finalHandler(text);
       else pendingFinal = text;

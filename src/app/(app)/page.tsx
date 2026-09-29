@@ -7,7 +7,9 @@ import ReconnectGoogleCard from "@/components/ReconnectGoogleCard";
 import { BulbIcon, CalendarIcon, MailIcon, TasksIcon } from "@/components/icons";
 import { greetingKey, shortDate } from "@/lib/dates";
 import { playBark, preloadBark } from "@/lib/bark";
+import { primeAudio } from "@/lib/recorder";
 import { pickSuggestion } from "@/lib/suggestion";
+import { voiceStatus } from "@/lib/voice/client";
 
 export default function DashboardPage() {
   const app = useApp();
@@ -16,10 +18,14 @@ export default function DashboardPage() {
   const [barking, setBarking] = useState(false);
   const [greetHello, greetSub] = s.greet[greetingKey(hour)];
 
-  useEffect(() => preloadBark(), []);
+  useEffect(() => {
+    preloadBark();
+    voiceStatus(); // warm up so the mic starts right after the bark
+  }, []);
 
   function dogTap() {
     playBark(); // real audio file, started inside the tap (required by iPhone Safari)
+    primeAudio(); // unlock the level meter's AudioContext inside the tap (iPhone)
     setBarking(true);
     setTimeout(() => setBarking(false), 420);
     app.openSheet("mic");

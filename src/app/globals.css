@@ -310,6 +310,12 @@
 /* ---- Milestone 3: mic talk button, confirm switch ---- */
 .mic-talk-btn{ margin:12px auto 0; border:none; border-radius:999px; padding:12px 22px; background:var(--burgundy); color:var(--on-burgundy); font-family:var(--font-rubik), 'Rubik', sans-serif; font-weight:600; font-size:14px; cursor:pointer; box-shadow:0 8px 20px rgba(67,10,27,.3); }
 .confirm-switch{ margin-inline-start:auto; border:none; background:none; color:var(--ink-soft); font-family:inherit; font-size:11px; text-decoration:underline; cursor:pointer; padding:0; }
+.mic-timer{ font-size:13px; font-variant-numeric:tabular-nums; color:var(--ink-soft); margin-top:-6px; }
+.mic-stop-label{ font-size:12px; color:var(--ink-soft); margin-top:8px; }
+.wave-row.live span{ animation:none; transform:none; transition:height .08s linear; }
+.mic-status.error{ color:var(--burgundy); font-weight:500; line-height:1.5; max-width:300px; }
+.mic-avatar.listening{ box-shadow:0 0 0 4px var(--gold), 0 8px 20px rgba(67,10,27,.3); }
+.confirm-heard{ font-size:12px; color:var(--ink-soft); margin-bottom:8px; line-height:1.45; }
 .confirm-actions button:disabled{ opacity:.6; }
 .mic-input-row input::placeholder{ color:var(--ink-soft); opacity:.7; font-size:12px; }
 

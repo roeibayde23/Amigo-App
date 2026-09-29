@@ -56,7 +56,11 @@ export type ApiError =
   | "not_found"
   | "bad_request"
   | "google_failed"
-  | "gmail_failed";
+  | "gmail_failed"
+  | "voice_unconfigured"
+  | "voice_busy"
+  | "voice_failed"
+  | "no_speech";
 
 export type MailError = ApiError;
 

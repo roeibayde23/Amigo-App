@@ -46,6 +46,9 @@ export type Strings = {
   micSpeakNow: string; micVoiceHint: string; micTypeHint: string; micNoPermission: string; micNoSpeech: string;
   micAgain: string; switchToTask: string; switchToEvent: string; noDate: string; fromMail: string;
   micTapToTalk: string; micExample: string;
+  micRecording: string; micTapToStop: string; micProcessing: string; micHeard: string; micTryAgain: string;
+  micErrDenied: string; micErrNoMic: string; micErrBusyMic: string; micErrUnsupported: string;
+  micErrFailed: string; micErrBusy: string; micErrOffline: string; micErrNoAnswer: string;
   // mail priority
   mailUrgent: string; mailOthers: string; mailLow: string; badgeUrgent: string; badgeImportant: string;
   askImportant: string; yes: string; no: string; showLow: (n: number) => string; hideLow: string;
@@ -146,6 +149,16 @@ const he: Strings = {
   switchToTask: "זו בעצם משימה", switchToEvent: "זה בעצם אירוע",
   noDate: "בלי תאריך", fromMail: "מתוך מייל",
   micTapToTalk: "🎙️ לחץ ודבר", micExample: "לדוגמה: פגישה עם שי מחר ב-9",
+  micRecording: "מקשיב...", micTapToStop: "לחץ לסיום", micProcessing: "מעבד...", micHeard: "שמעתי:",
+  micTryAgain: "🎙️ נסה שוב",
+  micErrDenied: "אין הרשאה למיקרופון. לחץ ״נסה שוב״ ובחר ״אפשר״. אם לא מופיעה שאלה: הגדרות ← אפליקציות ← Safari ← מיקרופון ← ״לשאול״. אפשר גם להקליד.",
+  micErrNoMic: "לא נמצא מיקרופון — אפשר להקליד במקום",
+  micErrBusyMic: "המיקרופון תפוס (שיחה? אפליקציה אחרת?) — סגור אותה ונסה שוב, או הקלד",
+  micErrUnsupported: "הדפדפן הזה לא מאפשר הקלטה — הקלד מה שהיית אומר",
+  micErrFailed: "לא הצלחתי להבין את ההקלטה — נסה שוב או הקלד",
+  micErrBusy: "יותר מדי בקשות כרגע — נסה שוב בעוד דקה, או הקלד",
+  micErrOffline: "אין חיבור לאינטרנט — נסה שוב או הקלד",
+  micErrNoAnswer: "זיהוי הדיבור לא עונה — הקלד מה שהיית אומר",
   mailUrgent: "דחוף וחשוב", mailOthers: "שאר המיילים", mailLow: "פחות חשוב", badgeUrgent: "דחוף", badgeImportant: "חשוב",
   askImportant: "זה חשוב?", yes: "כן", no: "לא",
   showLow: (n) => `הצג ${n} מיילים פחות חשובים`, hideLow: "הסתר מיילים פחות חשובים",
@@ -260,6 +273,16 @@ const en: Strings = {
   switchToTask: "Make it a task", switchToEvent: "Make it an event",
   noDate: "No date", fromMail: "From email",
   micTapToTalk: "🎙️ Tap and speak", micExample: "e.g. Meeting with Shai tomorrow at 9",
+  micRecording: "Listening...", micTapToStop: "Tap to finish", micProcessing: "Processing...", micHeard: "I heard:",
+  micTryAgain: "🎙️ Try again",
+  micErrDenied: "No microphone permission. Tap “Try again” and choose “Allow”. If no prompt appears: Settings → Apps → Safari → Microphone → “Ask”. You can also type.",
+  micErrNoMic: "No microphone found — you can type instead",
+  micErrBusyMic: "The microphone is busy (a call? another app?) — close it and try again, or type",
+  micErrUnsupported: "This browser can't record — type what you'd say",
+  micErrFailed: "I couldn't understand the recording — try again or type",
+  micErrBusy: "Too many requests right now — try again in a minute, or type",
+  micErrOffline: "No internet connection — try again or type",
+  micErrNoAnswer: "Speech recognition isn't responding — type what you'd say",
   mailUrgent: "Urgent & important", mailOthers: "Other emails", mailLow: "Less important", badgeUrgent: "Urgent", badgeImportant: "Important",
   askImportant: "Important?", yes: "Yes", no: "No",
   showLow: (n) => `Show ${n} less important emails`, hideLow: "Hide less important emails",
