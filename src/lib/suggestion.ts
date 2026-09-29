@@ -1,4 +1,6 @@
 import type { CalEvent, Mail, Task } from "./types";
+import { addDays } from "./dates";
+import { scoreMail, type SenderPrefs } from "./mailPriority";
 import { isTaskDone } from "./recurrence";
 
 export type Suggestion =
@@ -7,18 +9,40 @@ export type Suggestion =
   | { kind: "task"; task: Task }
   | { kind: "none" };
 
-/** Same priority as the prototype: next event → important (or unread) mail → open task → all clear. */
-export function pickSuggestion(events: CalEvent[], mails: Mail[], tasks: Task[], today: string, now: string): Suggestion {
-  const upcoming = events
-    .filter((e) => e.date > today || (e.date === today && (e.start ?? "") >= now))
-    .sort((a, b) => (a.date + (a.start ?? "")).localeCompare(b.date + (b.start ?? "")));
-  if (upcoming.length) return { kind: "event", event: upcoming[0] };
+/**
+ * The dashboard's "most urgent next thing":
+ * next timed event today → urgent mail → task due today/overdue → next event this week →
+ * any open task → unread mail → all clear.
+ */
+export function pickSuggestion(
+  events: CalEvent[],
+  mails: Mail[],
+  tasks: Task[],
+  today: string,
+  now: string,
+  prefs: SenderPrefs = {},
+): Suggestion {
+  const byStart = (a: CalEvent, b: CalEvent) => (a.date + (a.start ?? "")).localeCompare(b.date + (b.start ?? ""));
+  const todayNext = events.filter((e) => e.date === today && !!e.start && !e.allDay && e.start >= now).sort(byStart);
+  if (todayNext.length) return { kind: "event", event: todayNext[0] };
 
-  const mail = mails.find((m) => m.important) ?? mails.find((m) => m.unread);
-  if (mail) return { kind: "mail", mail };
+  const urgent = mails
+    .filter((m) => scoreMail(m, prefs).level === "urgent")
+    .sort((a, b) => Number(b.unread) - Number(a.unread) || b.date.localeCompare(a.date));
+  if (urgent.length) return { kind: "mail", mail: urgent[0] };
 
-  const open = tasks.find((t) => !isTaskDone(t, today));
-  if (open) return { kind: "task", task: open };
+  const open = tasks.filter((t) => !isTaskDone(t, today));
+  const dueNow = open.filter((t) => !!t.dueDate && t.dueDate <= today).sort((a, b) => a.dueDate!.localeCompare(b.dueDate!));
+  if (dueNow.length) return { kind: "task", task: dueNow[0] };
+
+  const week = addDays(today, 7);
+  const soon = events.filter((e) => e.date > today && e.date <= week).sort(byStart);
+  if (soon.length) return { kind: "event", event: soon[0] };
+
+  if (open.length) return { kind: "task", task: open[0] };
+
+  const unread = mails.find((m) => m.unread && scoreMail(m, prefs).level !== "low");
+  if (unread) return { kind: "mail", mail: unread };
 
   return { kind: "none" };
 }

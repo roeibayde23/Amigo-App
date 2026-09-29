@@ -62,3 +62,9 @@ export const RepeatIcon = ({ sw, ...p }: P) => (
 
 /** Arrow pointing "back" for the current direction (right in RTL, left in LTR). */
 export const BackChevron = ({ rtl, ...p }: P & { rtl: boolean }) => (rtl ? <ChevronRight {...p} /> : <ChevronLeft {...p} />);
+export const StarIcon = ({ sw, ...p }: P) => (
+  <svg {...base(sw)} {...p}><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z" /></svg>
+);
+export const EyeOffIcon = ({ sw, ...p }: P) => (
+  <svg {...base(sw)} {...p}><path d="M17.9 17.9A10 10 0 0 1 12 20c-7 0-10-8-10-8a18 18 0 0 1 4.1-5.9M9.9 4.2A9 9 0 0 1 12 4c7 0 10 8 10 8a18 18 0 0 1-2.2 3.2M14.1 14.1a3 3 0 1 1-4.2-4.2M2 2l20 20" /></svg>
+);
