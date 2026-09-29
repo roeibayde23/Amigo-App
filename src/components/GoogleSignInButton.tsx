@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
-import { GMAIL_SCOPE, SITE_URL } from "@/lib/env";
+import { GOOGLE_SCOPES, SITE_URL } from "@/lib/env";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
-/** Starts Supabase Google OAuth with Gmail read-only + offline access (refresh token). */
+/** Starts Supabase Google OAuth: Gmail read-only + Calendar events + Tasks, offline access (refresh token). */
 export async function startGoogleSignIn(next?: string) {
   const origin = typeof window !== "undefined" ? window.location.origin : SITE_URL;
   const redirectTo = `${origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ""}`;
@@ -11,7 +11,7 @@ export async function startGoogleSignIn(next?: string) {
     provider: "google",
     options: {
       redirectTo,
-      scopes: GMAIL_SCOPE,
+      scopes: GOOGLE_SCOPES.join(" "),
       queryParams: { access_type: "offline", prompt: "consent" },
     },
   });

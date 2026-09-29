@@ -1,9 +1,8 @@
 import "server-only";
 import { GMAIL_QUERY } from "../env.server";
+import { googleFetch } from "./api";
 
 const API = "https://gmail.googleapis.com/gmail/v1/users/me";
-
-export class GmailAuthError extends Error {}
 
 export type GmailMessage = {
   id: string;
@@ -14,17 +13,13 @@ export type GmailMessage = {
   snippet: string;
   date: string; // ISO
   unread: boolean;
+  gmailImportant: boolean; // Gmail's own IMPORTANT label
+  starred: boolean;
+  category: string | null; // PROMOTIONS / SOCIAL / UPDATES / FORUMS / null (primary)
+  bulk: boolean; // newsletter / automated headers
 };
 
-async function gmailFetch<T>(path: string, accessToken: string): Promise<T> {
-  const res = await fetch(`${API}${path}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    cache: "no-store",
-  });
-  if (res.status === 401) throw new GmailAuthError("Gmail rejected the access token");
-  if (!res.ok) throw new Error(`Gmail API ${res.status}: ${(await res.text()).slice(0, 300)}`);
-  return (await res.json()) as T;
-}
+const gmailFetch = <T,>(path: string, accessToken: string) => googleFetch<T>(accessToken, `${API}${path}`);
 
 const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
 export function decodeEntities(s: string): string {
@@ -72,7 +67,8 @@ export async function listRecentInbox(accessToken: string, max = 15): Promise<Gm
   const ids = list.messages ?? [];
   const msgs = await mapLimit(ids, 5, (m) =>
     gmailFetch<MsgResp>(
-      `/messages/${m.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`,
+      `/messages/${m.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date` +
+        `&metadataHeaders=List-Unsubscribe&metadataHeaders=Precedence&metadataHeaders=Auto-Submitted`,
       accessToken,
     ),
   );
@@ -81,6 +77,9 @@ export async function listRecentInbox(accessToken: string, max = 15): Promise<Gm
       const h = (name: string) =>
         m.payload?.headers?.find((x) => x.name.toLowerCase() === name.toLowerCase())?.value ?? "";
       const from = parseFrom(h("From"));
+      const labels = m.labelIds ?? [];
+      const precedence = h("Precedence").toLowerCase();
+      const autoSubmitted = h("Auto-Submitted").toLowerCase();
       return {
         id: m.id,
         threadId: m.threadId,
@@ -89,7 +88,14 @@ export async function listRecentInbox(accessToken: string, max = 15): Promise<Gm
         subject: h("Subject") || "(ללא נושא)",
         snippet: decodeEntities(m.snippet ?? ""),
         date: new Date(Number(m.internalDate ?? Date.now())).toISOString(),
-        unread: (m.labelIds ?? []).includes("UNREAD"),
+        unread: labels.includes("UNREAD"),
+        gmailImportant: labels.includes("IMPORTANT"),
+        starred: labels.includes("STARRED"),
+        category: labels.find((l) => l.startsWith("CATEGORY_") && l !== "CATEGORY_PERSONAL")?.slice(9) ?? null,
+        bulk:
+          !!h("List-Unsubscribe") ||
+          ["bulk", "list", "junk"].includes(precedence) ||
+          (!!autoSubmitted && autoSubmitted !== "no"),
       };
     })
     .sort((a, b) => b.date.localeCompare(a.date));

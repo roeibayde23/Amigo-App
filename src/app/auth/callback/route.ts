@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { DEMO_MODE, GMAIL_SCOPE } from "@/lib/env";
+import { DEMO_MODE, GOOGLE_SCOPES } from "@/lib/env";
 import { gmailServerConfigured, isAllowedEmail } from "@/lib/env.server";
-import { saveRefreshToken } from "@/lib/google/tokens";
+import { grantedScopesOf, saveRefreshToken } from "@/lib/google/tokens";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +44,10 @@ export async function GET(request: NextRequest) {
   const refreshToken = data.session.provider_refresh_token;
   if (refreshToken && gmailServerConfigured()) {
     try {
-      await saveRefreshToken(data.user.id, email, refreshToken, GMAIL_SCOPE);
+      // Store the scopes Google actually granted (the user can untick boxes on the consent screen).
+      const providerToken = data.session.provider_token;
+      const granted = (providerToken && (await grantedScopesOf(providerToken))) || GOOGLE_SCOPES.join(" ");
+      await saveRefreshToken(data.user.id, email, refreshToken, granted);
     } catch (e) {
       console.error("[auth/callback] could not store Google token:", e instanceof Error ? e.message : e);
     }

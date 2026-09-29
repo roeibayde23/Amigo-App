@@ -20,3 +20,12 @@ export const DEMO_MODE =
   process.env.NEXT_PUBLIC_DEMO_MODE === "1" || !SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY;
 
 export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
+export const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
+/** Everything Amigo asks Google for at sign-in (openid/email/profile are added by Supabase).
+ *  Tasks are NOT synced to Google Tasks – they live in Supabase and go to iPhone Reminders via Shortcuts. */
+export const GOOGLE_SCOPES = [GMAIL_SCOPE, CALENDAR_SCOPE];
+
+export function hasScopes(granted: string | null | undefined, required: string[]): boolean {
+  const set = new Set((granted ?? "").split(/[\s,]+/).filter(Boolean));
+  return required.every((r) => set.has(r));
+}
